@@ -19,7 +19,7 @@
 
 using namespace std;
 using json = nlohmann::ordered_json;
-#define PHASE1
+#undef PHASE1
 string convertToHex(unsigned char* input, int size);
 
 /* Modifying code to deploy Phase 1*/
@@ -948,9 +948,9 @@ int main(int argc, char** argv)
             j["Sections"][i]["Section"]["NumberOfRegisterDataPairs"] =
                 regDataPairs[i];
             j["Sections"][i]["Section"]["InstanceBase"] =
-                addressRepresentation(
-                    convertToHex(secDecode[i].InstanceBase,
-                                 sizeof(secDecode[i].InstanceBase)));
+                addressRepresentation(convertToHexLittleEndian(
+                    secDecode[i].InstanceBase,
+                    sizeof(secDecode[i].InstanceBase)));
 #endif
         }
 
@@ -1180,11 +1180,12 @@ int main(int argc, char** argv)
                            (16 * k),
                        16);
 
-                j["Sections"][i]["Section"]["Registers"]
-                 [addressRepresentation(convertToHexLittleEndian(
-                     reg[0].address, sizeof(reg[0].address)))] =
-                     addressRepresentation(convertToHexLittleEndian(
-                         reg[0].value, sizeof(reg[0].value)));
+                j["Sections"][i]["Section"]["Registers"][k]["Address"] =
+                    addressRepresentation(convertToHexLittleEndian(
+                        reg[0].address, sizeof(reg[0].address)));
+                j["Sections"][i]["Section"]["Registers"][k]["Value"] =
+                    addressRepresentation(convertToHexLittleEndian(
+                        reg[0].value, sizeof(reg[0].value)));
 #endif
             }
         }
