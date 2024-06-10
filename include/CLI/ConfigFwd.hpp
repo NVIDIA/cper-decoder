@@ -1,6 +1,6 @@
-// Copyright (c) 2017-2022, University of Cincinnati, developed by Henry Schreiner
-// under NSF AWARD 1414736 and by the respective contributors.
-// All rights reserved.
+// Copyright (c) 2017-2022, University of Cincinnati, developed by Henry
+// Schreiner under NSF AWARD 1414736 and by the respective contributors. All
+// rights reserved.
 //
 // SPDX-License-Identifier: BSD-3-Clause
 
@@ -17,13 +17,15 @@
 #include "Error.hpp"
 #include "StringTools.hpp"
 
-namespace CLI {
+namespace CLI
+{
 // [CLI11:config_fwd_hpp:verbatim]
 
 class App;
 
 /// Holds values to load into Options
-struct ConfigItem {
+struct ConfigItem
+{
     /// This is the list of parents
     std::vector<std::string> parents{};
 
@@ -34,7 +36,8 @@ struct ConfigItem {
     std::vector<std::string> inputs{};
 
     /// The list of parents and name joined by "."
-    std::string fullname() const {
+    std::string fullname() const
+    {
         std::vector<std::string> tmp = parents;
         tmp.emplace_back(name);
         return detail::join(tmp, ".");
@@ -42,32 +45,39 @@ struct ConfigItem {
 };
 
 /// This class provides a converter for configuration files.
-class Config {
+class Config
+{
   protected:
     std::vector<ConfigItem> items{};
 
   public:
     /// Convert an app into a configuration
-    virtual std::string to_config(const App *, bool, bool, std::string) const = 0;
+    virtual std::string to_config(const App*, bool, bool,
+                                  std::string) const = 0;
 
     /// Convert a configuration into an app
-    virtual std::vector<ConfigItem> from_config(std::istream &) const = 0;
+    virtual std::vector<ConfigItem> from_config(std::istream&) const = 0;
 
     /// Get a flag value
-    virtual std::string to_flag(const ConfigItem &item) const {
-        if(item.inputs.size() == 1) {
+    virtual std::string to_flag(const ConfigItem& item) const
+    {
+        if (item.inputs.size() == 1)
+        {
             return item.inputs.at(0);
         }
-        if(item.inputs.empty()) {
+        if (item.inputs.empty())
+        {
             return "{}";
         }
         throw ConversionError::TooManyInputsFlag(item.fullname());
     }
 
-    /// Parse a config file, throw an error (ParseError:ConfigParseError or FileError) on failure
-    std::vector<ConfigItem> from_file(const std::string &name) {
+    /// Parse a config file, throw an error (ParseError:ConfigParseError or
+    /// FileError) on failure
+    std::vector<ConfigItem> from_file(const std::string& name)
+    {
         std::ifstream input{name};
-        if(!input.good())
+        if (!input.good())
             throw FileError::Missing(name);
 
         return from_config(input);
@@ -78,7 +88,8 @@ class Config {
 };
 
 /// This converter works with INI/TOML files; to write INI files use ConfigINI
-class ConfigBase : public Config {
+class ConfigBase : public Config
+{
   protected:
     /// the character used for comments
     char commentChar = '#';
@@ -104,63 +115,86 @@ class ConfigBase : public Config {
     std::string configSection{};
 
   public:
-    std::string
-    to_config(const App * /*app*/, bool default_also, bool write_description, std::string prefix) const override;
+    std::string to_config(const App* /*app*/, bool default_also,
+                          bool write_description,
+                          std::string prefix) const override;
 
-    std::vector<ConfigItem> from_config(std::istream &input) const override;
+    std::vector<ConfigItem> from_config(std::istream& input) const override;
     /// Specify the configuration for comment characters
-    ConfigBase *comment(char cchar) {
+    ConfigBase* comment(char cchar)
+    {
         commentChar = cchar;
         return this;
     }
     /// Specify the start and end characters for an array
-    ConfigBase *arrayBounds(char aStart, char aEnd) {
+    ConfigBase* arrayBounds(char aStart, char aEnd)
+    {
         arrayStart = aStart;
         arrayEnd = aEnd;
         return this;
     }
     /// Specify the delimiter character for an array
-    ConfigBase *arrayDelimiter(char aSep) {
+    ConfigBase* arrayDelimiter(char aSep)
+    {
         arraySeparator = aSep;
         return this;
     }
     /// Specify the delimiter between a name and value
-    ConfigBase *valueSeparator(char vSep) {
+    ConfigBase* valueSeparator(char vSep)
+    {
         valueDelimiter = vSep;
         return this;
     }
     /// Specify the quote characters used around strings and characters
-    ConfigBase *quoteCharacter(char qString, char qChar) {
+    ConfigBase* quoteCharacter(char qString, char qChar)
+    {
         stringQuote = qString;
         characterQuote = qChar;
         return this;
     }
     /// Specify the maximum number of parents
-    ConfigBase *maxLayers(uint8_t layers) {
+    ConfigBase* maxLayers(uint8_t layers)
+    {
         maximumLayers = layers;
         return this;
     }
     /// Specify the separator to use for parent layers
-    ConfigBase *parentSeparator(char sep) {
+    ConfigBase* parentSeparator(char sep)
+    {
         parentSeparatorChar = sep;
         return this;
     }
     /// get a reference to the configuration section
-    std::string &sectionRef() { return configSection; }
+    std::string& sectionRef()
+    {
+        return configSection;
+    }
     /// get the section
-    const std::string &section() const { return configSection; }
+    const std::string& section() const
+    {
+        return configSection;
+    }
     /// specify a particular section of the configuration file to use
-    ConfigBase *section(const std::string &sectionName) {
+    ConfigBase* section(const std::string& sectionName)
+    {
         configSection = sectionName;
         return this;
     }
 
     /// get a reference to the configuration index
-    int16_t &indexRef() { return configIndex; }
+    int16_t& indexRef()
+    {
+        return configIndex;
+    }
     /// get the section index
-    int16_t index() const { return configIndex; }
-    /// specify a particular index in the section to use (-1) for all sections to use
-    ConfigBase *index(int16_t sectionIndex) {
+    int16_t index() const
+    {
+        return configIndex;
+    }
+    /// specify a particular index in the section to use (-1) for all sections
+    /// to use
+    ConfigBase* index(int16_t sectionIndex)
+    {
         configIndex = sectionIndex;
         return this;
     }
@@ -170,10 +204,11 @@ class ConfigBase : public Config {
 using ConfigTOML = ConfigBase;
 
 /// ConfigINI generates a "standard" INI compliant output
-class ConfigINI : public ConfigTOML {
-
+class ConfigINI : public ConfigTOML
+{
   public:
-    ConfigINI() {
+    ConfigINI()
+    {
         commentChar = ';';
         arrayStart = '\0';
         arrayEnd = '\0';
@@ -182,4 +217,4 @@ class ConfigINI : public ConfigTOML {
     }
 };
 // [CLI11:config_fwd_hpp:end]
-}  // namespace CLI
+} // namespace CLI
