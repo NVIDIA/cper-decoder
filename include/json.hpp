@@ -2578,7 +2578,8 @@ using is_detected_convertible =
 #endif
 #endif
 
-#ifndef JSON_HAS_RANGES ranges header shipping in GCC 11.1.0 (released 2021-04-27) has
+#ifndef JSON_HAS_RANGES 
+  // ranges header shipping in GCC 11.1.0 (released 2021-04-27) has
   // syntax error
 #if defined(__GLIBCXX__) && __GLIBCXX__ == 20210427
 #define JSON_HAS_RANGES 0

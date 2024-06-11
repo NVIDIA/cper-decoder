@@ -19,7 +19,7 @@
 
 using namespace std;
 using json = nlohmann::ordered_json;
-#undef PHASE1
+#define PHASE1
 string convertToHex(unsigned char* input, int size);
 
 /* Modifying code to deploy Phase 1*/
@@ -795,11 +795,9 @@ int main(int argc, char** argv)
     j["Header"]["CreatorID"] =
         guidDecode(convertToHex(p->CreatorID, sizeof(p->CreatorID)));
 #endif
-    string notif = guidDecode(
-        convertToHex(p->NotificationType, sizeof(p->NotificationType)));
-#ifndef PHASE1
     j["Header"]["NotificationType"] = guidDecode(
         convertToHex(p->NotificationType, sizeof(p->NotificationType)));
+#ifndef PHASE1
     j["Header"]["RecordID"] = convertToHex(p->RecordID, sizeof(p->RecordID));
     if (headerFlags.find((int)p->Flags[0]) != headerFlags.end())
     {
