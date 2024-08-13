@@ -329,16 +329,14 @@ void memErrValidationBitsDecode(unsigned char* input, int i)
                                                                     : "Invalid";
                 break;
             case 3:
-                j["Sections"][i]["Section"]["ValidationBits"]
-                 ["NodeValidity"] =
-                     (((int)input[7] & (0x01 << k)) == (0x01 << k)) ? "Valid"
-                                                                    : "Invalid";
+                j["Sections"][i]["Section"]["ValidationBits"]["NodeValidity"] =
+                    (((int)input[7] & (0x01 << k)) == (0x01 << k)) ? "Valid"
+                                                                   : "Invalid";
                 break;
             case 4:
-                j["Sections"][i]["Section"]["ValidationBits"]
-                 ["CardValidity"] =
-                     (((int)input[7] & (0x01 << k)) == (0x01 << k)) ? "Valid"
-                                                                    : "Invalid";
+                j["Sections"][i]["Section"]["ValidationBits"]["CardValidity"] =
+                    (((int)input[7] & (0x01 << k)) == (0x01 << k)) ? "Valid"
+                                                                   : "Invalid";
                 break;
             case 5:
                 j["Sections"][i]["Section"]["ValidationBits"]
@@ -347,10 +345,9 @@ void memErrValidationBitsDecode(unsigned char* input, int i)
                                                                     : "Invalid";
                 break;
             case 6:
-                j["Sections"][i]["Section"]["ValidationBits"]
-                 ["BankValidity"] =
-                     (((int)input[7] & (0x01 << k)) == (0x01 << k)) ? "Valid"
-                                                                    : "Invalid";
+                j["Sections"][i]["Section"]["ValidationBits"]["BankValidity"] =
+                    (((int)input[7] & (0x01 << k)) == (0x01 << k)) ? "Valid"
+                                                                   : "Invalid";
                 break;
             case 7:
                 j["Sections"][i]["Section"]["ValidationBits"]
@@ -542,10 +539,9 @@ void armErrValidationBitsDecode(unsigned char* input, int i)
         switch (k)
         {
             case 0:
-                j["Sections"][i]["Section"]["ValidationBits"]
-                 ["MPIDRValidity"] =
-                     (((int)input[7] & (0x01 << k)) == (0x01 << k)) ? "Valid"
-                                                                    : "Invalid";
+                j["Sections"][i]["Section"]["ValidationBits"]["MPIDRValidity"] =
+                    (((int)input[7] & (0x01 << k)) == (0x01 << k)) ? "Valid"
+                                                                   : "Invalid";
                 break;
             case 1:
                 j["Sections"][i]["Section"]["ValidationBits"]
@@ -588,16 +584,13 @@ void memErrErrorStatusTypeDecode(int input, int i)
                 "ERR_INTERNAL";
             break;
         case 16:
-            j["Sections"][i]["Section"]["ErrorStatus"]["ErrorType"] =
-                "ERR_BUS";
+            j["Sections"][i]["Section"]["ErrorStatus"]["ErrorType"] = "ERR_BUS";
             break;
         case 4:
-            j["Sections"][i]["Section"]["ErrorStatus"]["ErrorType"] =
-                "ERR_MEM";
+            j["Sections"][i]["Section"]["ErrorStatus"]["ErrorType"] = "ERR_MEM";
             break;
         case 5:
-            j["Sections"][i]["Section"]["ErrorStatus"]["ErrorType"] =
-                "ERR_TLB";
+            j["Sections"][i]["Section"]["ErrorStatus"]["ErrorType"] = "ERR_TLB";
             break;
         case 6:
             j["Sections"][i]["Section"]["ErrorStatus"]["ErrorType"] =
@@ -616,8 +609,7 @@ void memErrErrorStatusTypeDecode(int input, int i)
                 "ERR_FLOW";
             break;
         case 17:
-            j["Sections"][i]["Section"]["ErrorStatus"]["ErrorType"] =
-                "ERR_MAP";
+            j["Sections"][i]["Section"]["ErrorStatus"]["ErrorType"] = "ERR_MAP";
             break;
         case 18:
             j["Sections"][i]["Section"]["ErrorStatus"]["ErrorType"] =
@@ -628,8 +620,7 @@ void memErrErrorStatusTypeDecode(int input, int i)
                 "ERR_UNIMPL";
             break;
         case 20:
-            j["Sections"][i]["Section"]["ErrorStatus"]["ErrorType"] =
-                "ERR_LOL";
+            j["Sections"][i]["Section"]["ErrorStatus"]["ErrorType"] = "ERR_LOL";
             break;
         case 21:
             j["Sections"][i]["Section"]["ErrorStatus"]["ErrorType"] =
@@ -763,7 +754,7 @@ int main(int argc, char** argv)
                                           sizeof(p->SectionCount));
 #ifndef PHASE1
     j["Header"]["SignatureStart"] = convertToString(p->signatureStart,
-                                                     sizeof(p->signatureStart));
+                                                    sizeof(p->signatureStart));
     j["Header"]["MajorRevision"] = revision[1];
     j["Header"]["MinorRevision"] = revision[0];
     j["Header"]["SignatureEnd"] =
@@ -812,11 +803,11 @@ int main(int argc, char** argv)
 #endif
     // Writing the Section Descriptors into the JSON file
     const char* temp = line.c_str();
-    sectionDescriptor sections[secCount];
-    int secOffset[secCount];
-    int secLength[secCount];
-    int secTrack[secCount];
-    string secTrackString[secCount];
+    vector<sectionDescriptor> sections(secCount);
+    vector<int> secOffset(secCount);
+    vector<int> secLength(secCount);
+    vector<int> secTrack(secCount);
+    vector<string> secTrackString(secCount);
     for (int i = 0; i < secCount; i++)
     {
         memcpy(&sections[i], temp + sbmrOffset + headerSize + (secDescSize * i),
@@ -911,11 +902,11 @@ int main(int argc, char** argv)
     }
 
     // Writing NV CPER Sections into JSON file
-    int regDataPairs[secCount];
-    section secDecode[secCount];
-    memErrorSection decodeMemErr[secCount];
-    pcieSection decodePcieErr[secCount];
-    armSection decodeArmProcErr[secCount];
+    vector<int> regDataPairs(secCount);
+    vector<section> secDecode(secCount);
+    vector<memErrorSection> decodeMemErr(secCount);
+    vector<pcieSection> decodePcieErr(secCount);
+    vector<armSection> decodeArmProcErr(secCount);
     for (int i = 0; i < secCount; i++)
     {
         if (secTrack[i] == 1)
@@ -945,10 +936,9 @@ int main(int argc, char** argv)
                 secDecode[i].RegDataPairs, sizeof(secDecode[i].RegDataPairs)));
             j["Sections"][i]["Section"]["NumberOfRegisterDataPairs"] =
                 regDataPairs[i];
-            j["Sections"][i]["Section"]["InstanceBase"] =
-                addressRepresentation(convertToHexLittleEndian(
-                    secDecode[i].InstanceBase,
-                    sizeof(secDecode[i].InstanceBase)));
+            j["Sections"][i]["Section"]["InstanceBase"] = addressRepresentation(
+                convertToHexLittleEndian(secDecode[i].InstanceBase,
+                                         sizeof(secDecode[i].InstanceBase)));
 #endif
         }
 
@@ -978,8 +968,8 @@ int main(int argc, char** argv)
             }
             if (count == 0)
             {
-                j["Sections"][i]["Section"]["ErrorStatus"]
-                 ["ErrorStatusField"][count] = "No Error Status Fields Set";
+                j["Sections"][i]["Section"]["ErrorStatus"]["ErrorStatusField"]
+                 [count] = "No Error Status Fields Set";
             }
             j["Sections"][i]["Section"]["PhysicalAddress"] =
                 addressRepresentation(convertToHexLittleEndian(
@@ -1059,16 +1049,14 @@ int main(int argc, char** argv)
             j["Sections"][i]["Section"]["MinorVersion"] =
                 (int)decodePcieErr[i].version[3];
 
-            j["Sections"][i]["Section"]["CommandStatus"]
-             ["PCICommandRegister"] =
-                 addressRepresentation(convertToHexLittleEndian(
-                     decodePcieErr[i].pciCommandReg,
-                     sizeof(decodePcieErr[i].pciCommandReg)));
-            j["Sections"][i]["Section"]["CommandStatus"]
-             ["PCIStatusRegister"] =
-                 addressRepresentation(convertToHexLittleEndian(
-                     decodePcieErr[i].pciStatusReg,
-                     sizeof(decodePcieErr[i].pciStatusReg)));
+            j["Sections"][i]["Section"]["CommandStatus"]["PCICommandRegister"] =
+                addressRepresentation(convertToHexLittleEndian(
+                    decodePcieErr[i].pciCommandReg,
+                    sizeof(decodePcieErr[i].pciCommandReg)));
+            j["Sections"][i]["Section"]["CommandStatus"]["PCIStatusRegister"] =
+                addressRepresentation(convertToHexLittleEndian(
+                    decodePcieErr[i].pciStatusReg,
+                    sizeof(decodePcieErr[i].pciStatusReg)));
 #endif
             j["Sections"][i]["Section"]["DeviceID"]["VendorID"] =
                 addressRepresentation(convertToHexLittleEndian(
