@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include <include/CLI/CLI.hpp>
+#include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
 
 #include <bitset>

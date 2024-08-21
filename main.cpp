@@ -15,7 +15,16 @@
  * limitations under the License.
  */
 
-#include <cper.h>
+#include "cper.h"
+
+#include <CLI/CLI.hpp>
+#include <nlohmann/json.hpp>
+
+#include <bitset>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <string>
 
 using namespace std;
 using json = nlohmann::ordered_json;
@@ -745,7 +754,7 @@ int main(int argc, char** argv)
     binFile.open(inputFile, ios::in | ios::binary); // open file in read mode
     if (!binFile.is_open())
         return app.exit(
-            CLI::FileError::Missing(inputFile + " was not readable"));
+            CLI::FileError::Missing(inputFile));
 
     ostringstream ostrm;
     ostrm << binFile.rdbuf();      // read the entire input binary file into an
@@ -758,7 +767,7 @@ int main(int argc, char** argv)
     ofstream jsonFile(outputFile);
     if (!jsonFile.is_open())
         return app.exit(
-            CLI::FileError::Missing(outputFile + " failed to open"));
+            CLI::FileError::Missing(outputFile));
 
     // Write the header fields into the JSON file
     string revision = convertToString(p->Revision, sizeof(p->Revision));
