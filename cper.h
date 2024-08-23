@@ -16,7 +16,7 @@
  */
 
 #include <include/CLI/CLI.hpp>
-#include <nlohmann/json.hpp>
+#include <include/json.hpp>
 
 #include <bitset>
 #include <fstream>

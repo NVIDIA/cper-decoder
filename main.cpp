@@ -99,7 +99,7 @@ string convertToStringAscii(unsigned char input[], int size)
  * @param input in the form of a string
  * @return corresponding integer value
  */
-int stringToInt(const string& input)
+int stringToInt(string input)
 {
     int result = 0;
     for (int i = 0; i < (int)input.size(); i++)
@@ -116,12 +116,12 @@ int stringToInt(const string& input)
  * This function takes a pointer to the timestamp array and formats it into a
  * string of a specific format NOTE: To be changed based on Redfish format
  * @param temp input to the function which is a pointer to the timestamp char
- * array @param size Defines the size of the array passed
+ * array
  * @return result which is the formatted string
  */
-string timestampDecode(unsigned char* temp, int size)
+string timestampDecode(unsigned char* temp)
 {
-    string time = convertToHex(temp, size);
+    string time = convertToHex(temp, sizeof(temp));
     string result = "Format: MM-DD-YYYY HH:MM:SS ";
 
     // Extract year, month, and day from the timestamp string
@@ -219,7 +219,7 @@ long int charToIntLittleEndian(unsigned char* input, int size)
  * @param input to the function which is a string
  * @return result which is the formatted string
  */
-string guidDecode(const string& input)
+string guidDecode(string input)
 {
     string result;
     for (int i = 6; i >= 0; i = i - 2)
@@ -713,7 +713,7 @@ void pcieErrPortTypeDecode(int input, int i)
  * @param input is the string which consisting of an address
  * @return string
  */
-string addressRepresentation(const string& input)
+string addressRepresentation(string input)
 {
     string x("0x");
     x.append(input);
@@ -725,40 +725,28 @@ int main(int argc, char** argv)
     // initialize hash maps
     initMaps();
     CLI::App app{"CPER Decoder"}; // label the command line interface
-
     string inputFile;
+    app.add_option(
+        "--redfish", inputFile,
+        "Binary File Path"); // provide an input option for the binary blob path
     string outputFile;
-    try
-    {
-        // input option for the binary blob path
-        app.add_option("--redfish", inputFile, "Binary File Path");
-        // output option for the JSON file
-        app.add_option("--json", outputFile, "JSON File Path");
-    }
-    catch (CLI::Error& e)
-    {
-        return app.exit(e);
-    }
+    app.add_option(
+        "--json", outputFile,
+        "JSON File Path"); // provide an output option for the JSON file
     CLI11_PARSE(app, argc, argv);
-
     ifstream binFile;
+    ofstream jsonFile;
+    string line;
     binFile.open(inputFile, ios::in | ios::binary); // open file in read mode
-    if (!binFile.is_open())
-        return app.exit(
-            CLI::FileError::Missing(inputFile + " was not readable"));
-
     ostringstream ostrm;
     ostrm << binFile.rdbuf();      // read the entire input binary file into an
                                    // output stringstream
-    string line = ostrm.str();     // convert from type ostringstream to string
+    line = ostrm.str();            // convert from type ostringstream to string
 
     header* p = (header*)&line[0]; // read the file into the header structure to
                                    // be able to segregate fields
 
-    ofstream jsonFile(outputFile);
-    if (!jsonFile.is_open())
-        return app.exit(
-            CLI::FileError::Missing(outputFile + " failed to open"));
+    jsonFile.open(outputFile);
 
     // Write the header fields into the JSON file
     string revision = convertToString(p->Revision, sizeof(p->Revision));
@@ -790,8 +778,7 @@ int main(int argc, char** argv)
     j["Header"]["RecordLength"] =
         charToIntLittleEndian(p->RecordLength, sizeof(p->RecordLength));
     string time = convertToHex(p->Timestamp, sizeof(p->Timestamp));
-    j["Header"]["Timestamp"] = timestampDecode(p->Timestamp,
-                                               sizeof(p->Timestamp));
+    j["Header"]["Timestamp"] = timestampDecode(p->Timestamp);
     j["Header"]["PlatformID"] =
         guidDecode(convertToHex(p->PlatformID, sizeof(p->PlatformID)));
     j["Header"]["PartitionID"] =
