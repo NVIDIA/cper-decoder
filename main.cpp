@@ -15,12 +15,21 @@
  * limitations under the License.
  */
 
-#include <cper.h>
+#include "cper.h"
+
+#include <CLI/CLI.hpp>
+#include <nlohmann/json.hpp>
+
+#include <bitset>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <string>
 
 using namespace std;
 using json = nlohmann::ordered_json;
 #define PHASE1
-string convertToHex(unsigned char* input, int size);
+string convertToHex(const unsigned char* input, int size);
 
 /* Modifying code to deploy Phase 1*/
 
@@ -40,7 +49,7 @@ json j;
  * @return TRUE if signature end is valid, FALSE otherwise
  */
 
-bool SignatureEndValidation(unsigned char* input)
+bool SignatureEndValidation(const unsigned char* input)
 {
     for (int i = 0; i < 4; i++)
     {
@@ -62,7 +71,7 @@ bool SignatureEndValidation(unsigned char* input)
  * passed
  * @return temp which is the string output
  */
-string convertToString(unsigned char* input, int size)
+string convertToString(const unsigned char* input, int size)
 {
     string temp(input, input + size);
     return temp;
@@ -78,7 +87,7 @@ string convertToString(unsigned char* input, int size)
  * passed
  * @return temp which is the string output
  */
-string convertToStringAscii(unsigned char input[], int size)
+string convertToStringAscii(const unsigned char* input, int size)
 {
     int i;
     for (i = 0; i < size; i++)
@@ -99,7 +108,7 @@ string convertToStringAscii(unsigned char input[], int size)
  * @param input in the form of a string
  * @return corresponding integer value
  */
-int stringToInt(string input)
+int stringToInt(const string& input)
 {
     int result = 0;
     for (int i = 0; i < (int)input.size(); i++)
@@ -116,12 +125,12 @@ int stringToInt(string input)
  * This function takes a pointer to the timestamp array and formats it into a
  * string of a specific format NOTE: To be changed based on Redfish format
  * @param temp input to the function which is a pointer to the timestamp char
- * array
+ * array @param size Defines the size of the array passed
  * @return result which is the formatted string
  */
-string timestampDecode(unsigned char* temp)
+string timestampDecode(const unsigned char* temp, int size)
 {
-    string time = convertToHex(temp, sizeof(temp));
+    string time = convertToHex(temp, size);
     string result = "Format: MM-DD-YYYY HH:MM:SS ";
 
     // Extract year, month, and day from the timestamp string
@@ -152,7 +161,7 @@ string timestampDecode(unsigned char* temp)
  * passed
  * @return result which is the string output
  */
-string convertToHex(unsigned char* input, int size)
+string convertToHex(const unsigned char* input, int size)
 {
     stringstream result;
     for (int k = 0; k < size; k++)
@@ -174,7 +183,7 @@ string convertToHex(unsigned char* input, int size)
  * passed
  * @return result which is the string output
  */
-string convertToHexLittleEndian(unsigned char* input, int size)
+string convertToHexLittleEndian(const unsigned char* input, int size)
 {
     stringstream result;
     for (int k = size - 1; k > -1; k--)
@@ -194,7 +203,7 @@ string convertToHexLittleEndian(unsigned char* input, int size)
  * passed
  * @return result which is the integer output
  */
-long int charToIntLittleEndian(unsigned char* input, int size)
+long int charToIntLittleEndian(const unsigned char* input, int size)
 {
     long int result = 0;
     for (int i = size - 1; i >= 0; i--)
@@ -204,7 +213,9 @@ long int charToIntLittleEndian(unsigned char* input, int size)
             result += 10;
         }
         else
+        {
             result += input[i];
+        }
         result = result << 8;
     }
     return (result >> 8);
@@ -219,7 +230,7 @@ long int charToIntLittleEndian(unsigned char* input, int size)
  * @param input to the function which is a string
  * @return result which is the formatted string
  */
-string guidDecode(string input)
+string guidDecode(const string& input)
 {
     string result;
     for (int i = 6; i >= 0; i = i - 2)
@@ -250,49 +261,35 @@ string guidDecode(string input)
 }
 
 // Defining hashmaps for certain fields with multiple possibilities
-map<int, string> errorSev;
-map<int, string> headerFlags;
-map<int, string> sectionSeverity;
-map<int, string> memErrType;
-
-/**
- * Initialize hashmaps
- *
- * This function initializes the defined hashmaps
- *
- * @param none
- * @return void
- */
-void initMaps()
-{
-    errorSev[0] = "Recoverable";
-    errorSev[1] = "Fatal";
-    errorSev[2] = "Corrected";
-    errorSev[3] = "Informational";
-    headerFlags[1] = "HW_ERROR_FLAGS_RECOVERED";
-    headerFlags[2] = "HW_ERROR_FLAGS_PREVERR";
-    headerFlags[4] = "HW_ERROR_FLAGS_SIMULATED";
-    sectionSeverity[0] = "Correctable";
-    sectionSeverity[1] = "Fatal";
-    sectionSeverity[2] = "Corrected";
-    sectionSeverity[3] = "None";
-    memErrType[0] = "Unknown";
-    memErrType[1] = "No Error";
-    memErrType[2] = "Sngle-bit ECC";
-    memErrType[3] = "Multi-bit ECC";
-    memErrType[4] = "Single-symbol ChipKill ECC";
-    memErrType[5] = "Multi-symbol ChipKill ECC";
-    memErrType[6] = "Master abort";
-    memErrType[7] = "Target abort";
-    memErrType[8] = "Parity Error";
-    memErrType[9] = "Watchdog timeout";
-    memErrType[10] = "Invalid address";
-    memErrType[11] = "Mirror Broken";
-    memErrType[12] = "Memory Sparing";
-    memErrType[13] = "Scrub corrected error";
-    memErrType[14] = "Scrub uncorrected error";
-    memErrType[15] = "Physical Memory Map-out event";
-}
+const map<int, string> errorSev = {
+    {0, "Recoverable"},
+    {1, "Fatal"},
+    {2, "Corrected"},
+    {3, "Informational"},
+};
+const map<int, string> headerFlags = {
+    {1, "HW_ERROR_FLAGS_RECOVERED"},
+    {2, "HW_ERROR_FLAGS_PREVERR"},
+    {4, "HW_ERROR_FLAGS_SIMULATED"},
+};
+const map<int, string> memErrType = {
+    {0, "Unknown"},
+    {1, "No Error"},
+    {2, "Sngle-bit ECC"},
+    {3, "Multi-bit ECC"},
+    {4, "Single-symbol ChipKill ECC"},
+    {5, "Multi-symbol ChipKill ECC"},
+    {6, "Master abort"},
+    {7, "Target abort"},
+    {8, "Parity Error"},
+    {9, "Watchdog timeout"},
+    {10, "Invalid address"},
+    {11, "Mirror Broken"},
+    {12, "Memory Sparing"},
+    {13, "Scrub corrected error"},
+    {14, "Scrub uncorrected error"},
+    {15, "Physical Memory Map-out event"},
+};
 
 /**
  * Function to check for validation bits in memory error section
@@ -304,7 +301,7 @@ void initMaps()
  * the section iterator
  * @return void
  */
-void memErrValidationBitsDecode(unsigned char* input, int i)
+void memErrValidationBitsDecode(const unsigned char* input, int i)
 {
     for (int k = 0; k < 8; k++)
     {
@@ -464,7 +461,7 @@ void memErrValidationBitsDecode(unsigned char* input, int i)
  * the section iterator
  * @return void
  */
-void pcieErrValidationBitsDecode(unsigned char* input, int i)
+void pcieErrValidationBitsDecode(const unsigned char* input, int i)
 {
     for (int k = 0; k < 8; k++)
     {
@@ -532,7 +529,7 @@ void pcieErrValidationBitsDecode(unsigned char* input, int i)
  * the section iterator
  * @return void
  */
-void armErrValidationBitsDecode(unsigned char* input, int i)
+void armErrValidationBitsDecode(const unsigned char* input, int i)
 {
     for (int k = 0; k < 4; k++)
     {
@@ -713,7 +710,7 @@ void pcieErrPortTypeDecode(int input, int i)
  * @param input is the string which consisting of an address
  * @return string
  */
-string addressRepresentation(string input)
+string addressRepresentation(const string& input)
 {
     string x("0x");
     x.append(input);
@@ -722,31 +719,40 @@ string addressRepresentation(string input)
 
 int main(int argc, char** argv)
 {
-    // initialize hash maps
-    initMaps();
     CLI::App app{"CPER Decoder"}; // label the command line interface
+
     string inputFile;
-    app.add_option(
-        "--redfish", inputFile,
-        "Binary File Path"); // provide an input option for the binary blob path
     string outputFile;
-    app.add_option(
-        "--json", outputFile,
-        "JSON File Path"); // provide an output option for the JSON file
+    try
+    {
+        // input option for the binary blob path
+        app.add_option("--redfish", inputFile, "Binary File Path");
+        // output option for the JSON file
+        app.add_option("--json", outputFile, "JSON File Path");
+    }
+    catch (CLI::Error& e)
+    {
+        return app.exit(e);
+    }
     CLI11_PARSE(app, argc, argv);
+
     ifstream binFile;
-    ofstream jsonFile;
-    string line;
     binFile.open(inputFile, ios::in | ios::binary); // open file in read mode
+    if (!binFile.is_open())
+        return app.exit(CLI::FileError::Missing(inputFile));
+
     ostringstream ostrm;
-    ostrm << binFile.rdbuf();      // read the entire input binary file into an
-                                   // output stringstream
-    line = ostrm.str();            // convert from type ostringstream to string
+    ostrm << binFile.rdbuf();  // read the entire input binary file into an
+                               // output stringstream
+    string line = ostrm.str(); // convert from type ostringstream to string
 
-    header* p = (header*)&line[0]; // read the file into the header structure to
-                                   // be able to segregate fields
+    // read the file into the header structure to
+    // be able to segregate fields
+    const header* p = reinterpret_cast<header*>(&line[0]);
 
-    jsonFile.open(outputFile);
+    ofstream jsonFile(outputFile);
+    if (!jsonFile.is_open())
+        return app.exit(CLI::FileError::Missing(outputFile));
 
     // Write the header fields into the JSON file
     string revision = convertToString(p->Revision, sizeof(p->Revision));
@@ -765,9 +771,10 @@ int main(int argc, char** argv)
 
     j["Header"]["SectionCount"] = secCount;
 #ifndef PHASE1
-    if (errorSev.find((int)p->ErrorSeverity[0]) != errorSev.end())
+    const auto& iterSev = errorSev.find((int)p->ErrorSeverity[0]);
+    if (iterSev != errorSev.end())
     {
-        j["Header"]["ErrorSeverity"] = errorSev[p->ErrorSeverity[0]];
+        j["Header"]["ErrorSeverity"] = iterSev->second;
     }
     j["Header"]["PlatformIDValidation"] =
         ((int)p->ValidationBits[0] & 0x1) == 0x01 ? "Valid" : "Invalid";
@@ -778,7 +785,8 @@ int main(int argc, char** argv)
     j["Header"]["RecordLength"] =
         charToIntLittleEndian(p->RecordLength, sizeof(p->RecordLength));
     string time = convertToHex(p->Timestamp, sizeof(p->Timestamp));
-    j["Header"]["Timestamp"] = timestampDecode(p->Timestamp);
+    j["Header"]["Timestamp"] = timestampDecode(p->Timestamp,
+                                               sizeof(p->Timestamp));
     j["Header"]["PlatformID"] =
         guidDecode(convertToHex(p->PlatformID, sizeof(p->PlatformID)));
     j["Header"]["PartitionID"] =
@@ -790,9 +798,10 @@ int main(int argc, char** argv)
         convertToHex(p->NotificationType, sizeof(p->NotificationType)));
 #ifndef PHASE1
     j["Header"]["RecordID"] = convertToHex(p->RecordID, sizeof(p->RecordID));
-    if (headerFlags.find((int)p->Flags[0]) != headerFlags.end())
+    const auto& iterFlags = headerFlags.find((int)p->Flags[0]);
+    if (iterFlags != headerFlags.end())
     {
-        j["Header"]["Flags"] = headerFlags[p->Flags[0]];
+        j["Header"]["Flags"] = iterFlags->second;
     }
     else
     {
@@ -802,7 +811,7 @@ int main(int argc, char** argv)
         "Field defined by the creator. Out of scope of this specification";
 #endif
     // Writing the Section Descriptors into the JSON file
-    const char* temp = line.c_str();
+    const char* lineC = line.c_str();
     vector<sectionDescriptor> sections(secCount);
     vector<int> secOffset(secCount);
     vector<int> secLength(secCount);
@@ -810,8 +819,8 @@ int main(int argc, char** argv)
     vector<string> secTrackString(secCount);
     for (int i = 0; i < secCount; i++)
     {
-        memcpy(&sections[i], temp + sbmrOffset + headerSize + (secDescSize * i),
-               72);
+        memcpy(&sections[i],
+               lineC + sbmrOffset + headerSize + (secDescSize * i), 72);
     }
     for (int i = 0; i < secCount; i++)
     {
@@ -889,11 +898,12 @@ int main(int argc, char** argv)
             secTrackString[i];
         j["Sections"][i]["SectionDescriptor"]["FRUId"] = guidDecode(
             convertToHex(sections[i].fruID, sizeof(sections[i].fruID)));
-        if (errorSev.find((int)sections[i].sectionSeverity[0]) !=
-            errorSev.end())
+        const auto& iterSev =
+            errorSev.find((int)sections[i].sectionSeverity[0]);
+        if (iterSev != errorSev.end())
         {
             j["Sections"][i]["SectionDescriptor"]["SectionSeverity"] =
-                errorSev[sections[i].sectionSeverity[0]];
+                iterSev->second;
         }
 #ifndef PHASE1
         j["Sections"][i]["SectionDescriptor"]["FRUText"] =
@@ -912,7 +922,7 @@ int main(int argc, char** argv)
         if (secTrack[i] == 1)
         { // condition to check if it is an NV CPER
             memcpy(&secDecode[i],
-                   temp + secOffset[i] + sbmrOffset + recordHeaderLen, 32);
+                   lineC + secOffset[i] + sbmrOffset + recordHeaderLen, 32);
             j["Sections"][i]["Section"]["IPSignature"] = (convertToStringAscii(
                 secDecode[i].IPSignature, sizeof(secDecode[i].IPSignature)));
 #ifndef PHASE1
@@ -922,11 +932,10 @@ int main(int argc, char** argv)
                 (charToIntLittleEndian(secDecode[i].ErrorInstance,
                                        sizeof(secDecode[i].ErrorInstance)));
 #endif
-            if (sectionSeverity.find((int)secDecode[i].Severity[0]) !=
-                sectionSeverity.end())
+            const auto& iterSev = errorSev.find((int)secDecode[i].Severity[0]);
+            if (iterSev != errorSev.end())
             {
-                j["Sections"][i]["Section"]["Severity"] =
-                    sectionSeverity[secDecode[i].Severity[0]];
+                j["Sections"][i]["Section"]["Severity"] = iterSev->second;
             }
             j["Sections"][i]["Section"]["SocketNumber"] =
                 (charToIntLittleEndian(secDecode[i].SocketNumber,
@@ -946,7 +955,7 @@ int main(int argc, char** argv)
         else if (secTrack[i] == 2)
         { // condition to check if it is a memory error section
             memcpy(&decodeMemErr[i],
-                   temp + sbmrOffset + secOffset[i] + recordHeaderLen, 80);
+                   lineC + sbmrOffset + secOffset[i] + recordHeaderLen, 80);
 #ifndef PHASE1
             memErrValidationBitsDecode(decodeMemErr[i].validationBits, i);
             memErrErrorStatusTypeDecode((int)decodeMemErr[i].errorStatus[6], i);
@@ -1008,11 +1017,12 @@ int main(int argc, char** argv)
             j["Sections"][i]["Section"]["TargetID"] = addressRepresentation(
                 convertToHexLittleEndian(decodeMemErr[i].targetID,
                                          sizeof(decodeMemErr[i].targetID)));
-            if (memErrType.find((int)decodeMemErr[i].memErrType[0]) !=
-                memErrType.end())
+            const auto& iterMem =
+                memErrType.find((int)decodeMemErr[i].memErrType[0]);
+            if (iterMem != memErrType.end())
             {
                 j["Sections"][i]["Section"]["MemoryErrorType"] =
-                    memErrType[(int)decodeMemErr[i].memErrType[0]];
+                    iterMem->second;
             }
             else
             {
@@ -1039,7 +1049,7 @@ int main(int argc, char** argv)
         else if (secTrack[i] == 3)
         {
             memcpy(&decodePcieErr[i],
-                   temp + sbmrOffset + secOffset[i] + recordHeaderLen, 208);
+                   lineC + sbmrOffset + secOffset[i] + recordHeaderLen, 208);
 #ifndef PHASE1
             pcieErrValidationBitsDecode(decodePcieErr[i].validationBits, i);
             pcieErrPortTypeDecode((int)decodePcieErr[i].portType[3], i);
@@ -1125,7 +1135,7 @@ int main(int argc, char** argv)
         else if (secTrack[i] == 4)
         {
             memcpy(&decodeArmProcErr[i],
-                   temp + sbmrOffset + secOffset[i] + recordHeaderLen, 40);
+                   lineC + sbmrOffset + secOffset[i] + recordHeaderLen, 40);
 #ifndef PHASE1
             armErrValidationBitsDecode(decodeArmProcErr[i].validationBits, i);
             long int numErrInfo =
@@ -1152,6 +1162,7 @@ int main(int argc, char** argv)
 
     // Code fragment to decode the register/data pairs and write into a JSON
     // object
+#ifndef PHASE1
     registers reg[1];
     for (int i = 0; i < secCount; i++)
     {
@@ -1159,11 +1170,9 @@ int main(int argc, char** argv)
         {
             for (int k = 0; k < regDataPairs[i]; k++)
             {
-                (void)reg[i];
-#ifndef PHASE1
                 memcpy(&reg[0],
-                       temp + sbmrOffset + secOffset[i] + recordHeaderLen + 32 +
-                           (16 * k),
+                       lineC + sbmrOffset + secOffset[i] + recordHeaderLen +
+                           32 + (16 * k),
                        16);
 
                 j["Sections"][i]["Section"]["Registers"][k]["Address"] =
@@ -1172,10 +1181,10 @@ int main(int argc, char** argv)
                 j["Sections"][i]["Section"]["Registers"][k]["Value"] =
                     addressRepresentation(convertToHexLittleEndian(
                         reg[0].value, sizeof(reg[0].value)));
-#endif
             }
         }
     }
+#endif
 
     // writing all the json objects into the JSON file before closing the file
     jsonFile << j;

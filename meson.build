@@ -1,3 +1,4 @@
 project('cper-proj', 'cpp',default_options:['default_library=static'])
-incdir = include_directories('include')
-executable('cperparse', 'main.cpp', include_directories : incdir)
+nlohmann_json_dep = dependency('nlohmann_json', version: '>=3.11.2', include_type: 'system')
+CLI11_dep = dependency('CLI11')
+executable('cperparse', 'main.cpp', dependencies: [ nlohmann_json_dep, CLI11_dep ])
